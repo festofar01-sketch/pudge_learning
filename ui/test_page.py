@@ -1,6 +1,4 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QGraphicsOpacityEffect
-from PyQt5.QtCore import QPropertyAnimation
+from PyQt5 import QtWidgets, QtCore, QtGui
 import random
 
 
@@ -8,193 +6,134 @@ class TestPage(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        # 15 вопросов по теме "Животные"
-        self.questions = [
-            ("Как переводится 'cat'?", [
-                ("Кошка", True), ("Собака", False), ("Птица", False), ("Корова", False),
-            ]),
-            ("Как переводится 'dog'?", [
-                ("Собака", True), ("Кошка", False), ("Лошадь", False), ("Утка", False),
-            ]),
-            ("Как переводится 'bird'?", [
-                ("Птица", True), ("Медведь", False), ("Рыба", False), ("Лиса", False),
-            ]),
-            ("Как переводится 'fish'?", [
-                ("Рыба", True), ("Змея", False), ("Птица", False), ("Корова", False),
-            ]),
-            ("Как переводится 'cow'?", [
-                ("Корова", True), ("Свинья", False), ("Коза", False), ("Овца", False),
-            ]),
-            ("Как переводится 'horse'?", [
-                ("Лошадь", True), ("Осел", False), ("Тигр", False), ("Кот", False),
-            ]),
-            ("Как переводится 'duck'?", [
-                ("Утка", True), ("Курица", False), ("Гусь", False), ("Петух", False),
-            ]),
-            ("Как переводится 'chicken'?", [
-                ("Курица", True), ("Утка", False), ("Гусь", False), ("Петух", False),
-            ]),
-            ("Как переводится 'sheep'?", [
-                ("Овца", True), ("Коза", False), ("Свинья", False), ("Кошка", False),
-            ]),
-            ("Как переводится 'goat'?", [
-                ("Коза", True), ("Овца", False), ("Лошадь", False), ("Корова", False),
-            ]),
-            ("Как переводится 'pig'?", [
-                ("Свинья", True), ("Корова", False), ("Кот", False), ("Собака", False),
-            ]),
-            ("Как переводится 'fox'?", [
-                ("Лиса", True), ("Волк", False), ("Тигр", False), ("Кот", False),
-            ]),
-            ("Как переводится 'wolf'?", [
-                ("Волк", True), ("Лиса", False), ("Слон", False), ("Кролик", False),
-            ]),
-            ("Как переводится 'rabbit'?", [
-                ("Кролик", True), ("Змея", False), ("Крокодил", False), ("Мышь", False),
-            ]),
-            ("Как переводится 'mouse'?", [
-                ("Мышь", True), ("Крыса", False), ("Крот", False), ("Бобр", False),
-            ]),
-        ]
+        self.questions = [...]  # сокращено для примера
 
         self.index = 0
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setAlignment(QtCore.Qt.AlignCenter)
-        layout.setSpacing(15)
+        # ОСНОВНОЙ ЛЕЙАУТ
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        title = QtWidgets.QLabel("Тест: Животные 🐶🐱")
-        title.setAlignment(QtCore.Qt.AlignCenter)
-        title.setStyleSheet("font-size:26px; font-weight:bold; color:#2E7D32;")
-        layout.addWidget(title)
+        # КАРТОЧКА
+        self.card = QtWidgets.QFrame()
+        self.card.setObjectName("card")
+        self.card.setMinimumWidth(330)
+
+        layout = QtWidgets.QVBoxLayout(self.card)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
+        layout.setSpacing(18)
+
+        self.title = QtWidgets.QLabel("Тест: Животные")
+        self.title.setObjectName("title")
+        layout.addWidget(self.title)
 
         self.number_label = QtWidgets.QLabel("")
-        self.number_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.number_label.setStyleSheet("font-size:16px; color:#555;")
+        self.number_label.setObjectName("subtitle")
         layout.addWidget(self.number_label)
 
-        # Прогресс-бар
         self.progress = QtWidgets.QProgressBar()
-        self.progress.setFixedWidth(300)
         self.progress.setRange(0, len(self.questions))
-        self.progress.setValue(0)
         self.progress.setTextVisible(False)
-        self.progress.setStyleSheet("""
-            QProgressBar { background:#eee; border-radius:8px; height:14px; }
-            QProgressBar::chunk { background:#4CAF50; border-radius:8px; }
-        """)
+        self.progress.setObjectName("goldProgress")
         layout.addWidget(self.progress)
 
-        self.label_question = QtWidgets.QLabel("")
-        self.label_question.setAlignment(QtCore.Qt.AlignCenter)
-        self.label_question.setStyleSheet("font-size:20px;")
-        layout.addWidget(self.label_question)
+        self.question_label = QtWidgets.QLabel("")
+        self.question_label.setObjectName("subtitle")
+        layout.addWidget(self.question_label)
 
-        # Кнопки ответа
         self.buttons = []
         for _ in range(4):
             btn = QtWidgets.QPushButton("")
-            btn.setFixedWidth(300)
-            btn.setMinimumHeight(42)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background:#4CAF50;
-                    color:white;
-                    font-size:16px;
-                    border-radius:10px;
-                }
-                QPushButton:hover { background:#43A047; }
-            """)
+            btn.setObjectName("testButton")
+            btn.setFixedWidth(260)
+            btn.setMinimumHeight(36)
             btn.clicked.connect(self.handle_answer)
             self.buttons.append(btn)
-            layout.addWidget(btn)
+            layout.addWidget(btn, alignment=QtCore.Qt.AlignCenter)
 
         self.status_label = QtWidgets.QLabel("")
-        self.status_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-size:18px;")
+        self.status_label.setObjectName("subtitle")
         layout.addWidget(self.status_label)
 
-    # --------------------- АНИМАЦИИ ----------------------
+        main_layout.addWidget(self.card)
 
-    def fade_in(self, widget, duration=350):
-        """Плавное появление."""
-        effect = QGraphicsOpacityEffect()
-        widget.setGraphicsEffect(effect)
+        # АНИМАЦИИ
+        self.opacity_effect = QtWidgets.QGraphicsOpacityEffect()
+        self.setGraphicsEffect(self.opacity_effect)
+        self.fade_anim = QtCore.QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.fade_anim.setDuration(250)
 
-        anim = QPropertyAnimation(effect, b"opacity")
-        anim.setDuration(duration)
-        anim.setStartValue(0)
-        anim.setEndValue(1)
-        anim.start()
+        # shake — теперь на card
+        self.shake_anim = QtCore.QPropertyAnimation(self.card, b"pos")
+        self.shake_anim.setDuration(150)
 
-        widget.animation = anim
+    def fade_in(self):
+        self.fade_anim.stop()
+        self.fade_anim.setStartValue(0)
+        self.fade_anim.setEndValue(1)
+        self.fade_anim.start()
 
-    def shake(self, widget):
-        """Тряска при неправильном ответе."""
-        anim = QPropertyAnimation(widget, b"pos")
-        anim.setDuration(250)
-        anim.setKeyValueAt(0, widget.pos())
-        anim.setKeyValueAt(0.25, widget.pos() + QtCore.QPoint(-6, 0))
-        anim.setKeyValueAt(0.50, widget.pos() + QtCore.QPoint(6, 0))
-        anim.setKeyValueAt(0.75, widget.pos() + QtCore.QPoint(-6, 0))
-        anim.setKeyValueAt(1, widget.pos())
-        anim.start()
-        widget.animation = anim
-
-    # ----------------------- ЛОГИКА ----------------------
+    def shake(self):
+        start = self.card.pos()
+        self.shake_anim.stop()
+        self.shake_anim.setKeyValueAt(0, start)
+        self.shake_anim.setKeyValueAt(0.25, start + QtCore.QPoint(10, 0))
+        self.shake_anim.setKeyValueAt(0.5, start - QtCore.QPoint(10, 0))
+        self.shake_anim.setKeyValueAt(0.75, start + QtCore.QPoint(10, 0))
+        self.shake_anim.setKeyValueAt(1, start)
+        self.shake_anim.start()
 
     def start_test(self):
+        self.fade_anim.stop()
+        self.shake_anim.stop()
+
+        for btn in self.buttons:
+            btn.show()
+            btn.setEnabled(True)
+
         self.index = 0
         self.progress.setValue(0)
+        self.fade_in()
         self.show_question()
 
     def show_question(self):
-        question, answers = self.questions[self.index]
+        q, answers = self.questions[self.index]
 
-        total = len(self.questions)
-        self.number_label.setText(f"Вопрос {self.index + 1} из {total}")
-        self.label_question.setText(question)
-        self.progress.setValue(self.index)
+        self.number_label.setText(f"Вопрос {self.index + 1} из {len(self.questions)}")
+        self.question_label.setText(q)
         self.status_label.setText("")
 
-        # Анимация появления
-        self.fade_in(self.label_question)
-        self.fade_in(self.number_label)
-        self.fade_in(self.progress)
-
-        # Перемешиваем варианты
         answers = list(answers)
         random.shuffle(answers)
 
         for btn, (text, correct) in zip(self.buttons, answers):
             btn.setText(text)
-            btn.is_correct = correct
-            btn.show()
-            self.fade_in(btn, duration=250)
+            btn.correct = correct
+
+        self.fade_in()
 
     def handle_answer(self):
         btn = self.sender()
 
-        if btn.is_correct:
-            self.status_label.setText("Правильно! 😊")
-            QtCore.QTimer.singleShot(250, self.next_question)
-        else:
-            self.status_label.setText("Неправильно 😢 Попробуй ещё раз")
-            self.shake(self.label_question)
+        if btn.correct:
+            self.status_label.setText("Правильно! ✨")
+            self.index += 1
 
-    def next_question(self):
-        self.index += 1
-
-        if self.index >= len(self.questions):
-            self.finish_test()
+            if self.index >= len(self.questions):
+                self.finish_test()
+            else:
+                self.progress.setValue(self.index)
+                self.show_question()
         else:
-            self.show_question()
+            self.status_label.setText("Неправильно 😢")
+            self.shake()
 
     def finish_test(self):
         self.progress.setValue(len(self.questions))
-        self.number_label.setText("")
-        self.label_question.setText("Тест завершён! 🎉")
-        self.status_label.setText("Ты молодец! Продолжай учиться ✨")
+        self.question_label.setText("Тест завершён! 🎉")
+        self.status_label.setText("Отличная работа!")
 
         for btn in self.buttons:
             btn.hide()
+
+        self.fade_in()

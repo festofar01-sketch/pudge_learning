@@ -1,34 +1,66 @@
-# login_page.py
-
 from PyQt5 import QtWidgets, QtCore
-from ui.ui_base import CenterCardPage
-from learning_platform.services import login_user
+from learning_platform.services import check_login
 
 
-class LoginPage(CenterCardPage):
-    switch_to_register = QtCore.pyqtSignal()
+class LoginPage(QtWidgets.QWidget):
     login_success = QtCore.pyqtSignal(object)
+    switch_to_register = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
-        self.add_title("Добро пожаловать!")
+        # --- ОСНОВНОЙ ЛЕЙАУТ ---
+        main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.username = self.add_field("Логин")
-        self.password = self.add_field("Пароль")
+        # --- КАРТОЧКА ---
+        card = QtWidgets.QFrame()
+        card.setObjectName("card")
+        card.setMinimumWidth(330)
+
+        card_layout = QtWidgets.QVBoxLayout(card)
+        card_layout.setAlignment(QtCore.Qt.AlignCenter)
+        card_layout.setSpacing(18)
+
+        # --- ТЕКСТ ---
+        title = QtWidgets.QLabel("Добро пожаловать!")
+        title.setObjectName("title")
+        card_layout.addWidget(title)
+
+        # --- ПОЛЕ ЛОГИНА ---
+        self.username = QtWidgets.QLineEdit()
+        self.username.setPlaceholderText("Логин")
+        self.username.setObjectName("inputField")
+        card_layout.addWidget(self.username)
+
+        # --- ПОЛЕ ПАРОЛЯ ---
+        self.password = QtWidgets.QLineEdit()
+        self.password.setPlaceholderText("Пароль")
         self.password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password.setObjectName("inputField")
+        card_layout.addWidget(self.password)
 
-        btn = self.add_button("Войти")
-        btn.clicked.connect(self.do_login)
+        # --- КНОПКА ВХОДА ---
+        btn_login = QtWidgets.QPushButton("Войти")
+        btn_login.setObjectName("primaryButton")
+        btn_login.clicked.connect(self.try_login)
+        card_layout.addWidget(btn_login)
 
-        reg_btn = self.add_button("Создать аккаунт")
-        reg_btn.clicked.connect(self.switch_to_register.emit)
+        # --- КНОПКА РЕГИСТРАЦИИ ---
+        btn_register = QtWidgets.QPushButton("Создать аккаунт")
+        btn_register.setObjectName("secondaryButton")
+        btn_register.clicked.connect(lambda: self.switch_to_register.emit())   # ← ИСПРАВЛЕНО
+        card_layout.addWidget(btn_register)
 
-    def do_login(self):
-        u = self.username.text()
-        p = self.password.text()
+        main_layout.addWidget(card)
 
-        user = login_user(u, p)
+    # ------------------ ЛОГИКА ------------------
+    def try_login(self):
+        username = self.username.text().strip()
+        password = self.password.text().strip()
+
+        user = check_login(username, password)
+
         if user:
             self.login_success.emit(user)
         else:

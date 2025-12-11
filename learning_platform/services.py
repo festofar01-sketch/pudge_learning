@@ -1,81 +1,157 @@
+import psycopg2
 import hashlib
-from learning_platform.db import fetch_one, execute
-from learning_platform.models import User
+
+# ============================================
+#               ПОДКЛЮЧЕНИЕ К БД
+# ============================================
+conn = psycopg2.connect(
+    dbname="pudge_learning",
+    user="postgres",
+    password="Ramil2007",
+    host="localhost",
+    port="5432"
+)
+conn.autocommit = True
 
 
+def get_cursor():
+    return conn.cursor()
+
+
+# ============================================
+#               ХЭШ ПАРОЛЕЙ
+# ============================================
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
-# ----------------- Регистрация -----------------
+# ============================================
+#                 ЛОГИН
+# ============================================
+def check_login(username, password):
+    cur = get_cursor()
 
-def register_user(username: str, raw_password: str, full_name: str):
-    # Проверяем, есть ли такой username
-    row = fetch_one("SELECT id FROM users WHERE username = %s", (username,))
-    if row:
-        raise ValueError("user exists")
+    cur.execute("SELECT id, username, password_hash FROM users WHERE username=%s", (username,))
+    row = cur.fetchone()
 
-    password_hash = hash_password(raw_password)
+    if not row:
+        return None
 
-    # СОЗДАЁМ через execute(), НЕ через cur.execute()
-    execute(
+    user_id, uname, pass_hash = row
+
+    if hash_password(password) == pass_hash:
+        class User:
+            def __init__(self, id, username):
+                self.id = id
+                self.username = username
+
+        return User(user_id, uname)
+
+    return None
+
+
+# ============================================
+#               РЕГИСТРАЦИЯ
+# ============================================
+def register_user(username, password, fullname=None):
+    cur = get_cursor()
+
+    cur.execute("SELECT id FROM users WHERE username=%s", (username,))
+    if cur.fetchone():
+        raise ValueError("User exists")
+
+    cur.execute(
         "INSERT INTO users (username, password_hash, full_name) VALUES (%s, %s, %s)",
-        (username, password_hash, full_name)
+        (username, hash_password(password), fullname)
     )
+    return True
 
-    # Делаем повторный SELECT
-    row = fetch_one(
-        "SELECT id, username, full_name, created_at FROM users WHERE username = %s",
-        (username,)
+
+# ============================================
+#           ОБНОВЛЕНИЕ ЛОГИНА
+# ============================================
+def update_username(user_id, new_username):
+    cur = get_cursor()
+
+    cur.execute("SELECT id FROM users WHERE username=%s", (new_username,))
+    if cur.fetchone():
+        return False
+
+    cur.execute(
+        "UPDATE users SET username=%s WHERE id=%s",
+        (new_username, user_id)
     )
+    return True
 
-    return User(
-        id=row["id"],
-        username=row["username"],
-        password_hash=password_hash,
-        full_name=row["full_name"],
-        created_at=row["created_at"]
+
+# ============================================
+#           ОБНОВЛЕНИЕ ПОЛНОГО ИМЕНИ
+# ============================================
+def update_fullname(user_id, new_fullname):
+    cur = get_cursor()
+    cur.execute(
+        "UPDATE users SET full_name=%s WHERE id=%s",
+        (new_fullname, user_id)
     )
+    return True
 
 
-
-# ----------------- Логин -----------------
-
-def login_user(username: str, raw_password: str):
-    password_hash = hash_password(raw_password)
-
-    row = fetch_one(
-        """
-        SELECT id, username, password_hash, full_name, created_at
-        FROM users
-        WHERE username = %s AND password_hash = %s
-        """,
-        (username, password_hash)
+# ============================================
+#            ОБНОВЛЕНИЕ ПАРОЛЯ
+# ============================================
+def update_password(user_id, new_password):
+    cur = get_cursor()
+    cur.execute(
+        "UPDATE users SET password_hash=%s WHERE id=%s",
+        (hash_password(new_password), user_id)
     )
+    return True
 
+
+# ============================================
+#              УДАЛЕНИЕ АККАУНТА
+# ============================================
+def delete_user(user_id):
+    cur = get_cursor()
+    cur.execute("DELETE FROM users WHERE id=%s", (user_id,))
+    return True
+
+
+# ============================================
+#          ЗАГРУЗКА УРОВНЕЙ И ВОПРОСОВ
+# ============================================
+def load_levels():
+    cur = get_cursor()
+    cur.execute("SELECT code, name FROM levels ORDER BY id")
+    return cur.fetchall()
+
+
+def load_questions_by_level(level_code):
+    cur = get_cursor()
+
+    cur.execute("SELECT id FROM levels WHERE code=%s", (level_code,))
+    row = cur.fetchone()
     if not row:
-        return None
+        return []
 
-    return User(
-        id=row["id"],
-        username=row["username"],
-        password_hash=row["password_hash"],
-        full_name=row["full_name"],
-        created_at=row["created_at"]
-    )
+    level_id = row[0]
 
-def check_login(username, raw_password):
-    row = fetch_one("SELECT * FROM users WHERE username = %s", (username,))
+    cur.execute("""
+        SELECT question, answer1, answer2, answer3, answer4, correct_answer
+        FROM questions
+        WHERE level_id=%s
+    """, (level_id,))
 
-    if not row:
-        return None
+    result = []
+    for q, a1, a2, a3, a4, correct in cur.fetchall():
+        result.append([
+            q,
+            [
+                (a1, correct == 1),
+                (a2, correct == 2),
+                (a3, correct == 3),
+                (a4, correct == 4),
+            ]
+        ])
 
-    user = User(**row)
-
-    if user.blocked:
-        raise ValueError("Пользователь заблокирован")
-
-    if user.password_hash != hash_password(raw_password):
-        return None
-
-    return user
+    return result

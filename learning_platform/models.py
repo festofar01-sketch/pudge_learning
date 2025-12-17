@@ -6,11 +6,11 @@ from datetime import datetime
 
 @dataclass
 class User:
-    id: int
-    username: str
-    password_hash: str
-    full_name: str | None
-    created_at: datetime
+    def __init__(self, id, username, full_name=None):
+        self.id = id
+        self.username = username
+        self.full_name = full_name
+
 
 
 @dataclass

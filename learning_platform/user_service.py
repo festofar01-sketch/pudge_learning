@@ -1,6 +1,7 @@
 import psycopg2
 import hashlib
 
+
 # ============================================
 #               ПОДКЛЮЧЕНИЕ К БД
 # ============================================
@@ -126,10 +127,13 @@ def load_levels():
     return cur.fetchall()
 
 
-def load_questions_by_level(level_code):
+def load_questions_by_level_and_task(level_code, task_level):
     cur = get_cursor()
 
-    cur.execute("SELECT id FROM levels WHERE code=%s", (level_code,))
+    cur.execute(
+        "SELECT id FROM levels WHERE code=%s",
+        (level_code,)
+    )
     row = cur.fetchone()
     if not row:
         return []
@@ -139,12 +143,13 @@ def load_questions_by_level(level_code):
     cur.execute("""
         SELECT question, answer1, answer2, answer3, answer4, correct_answer
         FROM questions
-        WHERE level_id=%s
-    """, (level_id,))
+        WHERE level_id=%s AND task_level=%s
+        ORDER BY id
+    """, (level_id, task_level))
 
     result = []
     for q, a1, a2, a3, a4, correct in cur.fetchall():
-        result.append([
+        result.append((
             q,
             [
                 (a1, correct == 1),
@@ -152,6 +157,31 @@ def load_questions_by_level(level_code):
                 (a3, correct == 3),
                 (a4, correct == 4),
             ]
-        ])
-
+        ))
     return result
+
+# ============================================
+#          СИНТАКСИС (Собери предложение)
+# ============================================
+
+def load_syntax_questions_by_level(level_code):
+    cur = get_cursor()
+
+    cur.execute("""
+        SELECT id, sentence, words, correct_order
+        FROM syntax_questions
+        WHERE level_code = %s
+        ORDER BY id
+    """, (level_code,))
+
+    questions = []
+    for qid, sentence, words, correct_order in cur.fetchall():
+        questions.append({
+            "id": qid,
+            "sentence": sentence,
+            "words": words,                 # text[] → list[str]
+            "correct_order": correct_order  # text[] → list[str]
+        })
+
+    return questions
+

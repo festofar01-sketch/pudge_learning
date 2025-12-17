@@ -1,48 +1,149 @@
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
+
+
+FORM_WIDTH = 420
 
 
 class MainMenuPage(QtWidgets.QWidget):
     start_learning = QtCore.pyqtSignal()
+    open_profile = QtCore.pyqtSignal()
     open_settings = QtCore.pyqtSignal()
-    exit_app = QtCore.pyqtSignal()
+    exit_app = QtCore.pyqtSignal()   # 🔥 ВАЖНО: чтобы не было AttributeError
 
     def __init__(self):
         super().__init__()
+        self._build_ui()
+        self._apply_styles()
 
-        main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setAlignment(QtCore.Qt.AlignCenter)
+    # ================= UI =================
+    def _build_ui(self):
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setAlignment(QtCore.Qt.AlignCenter)
 
-        # ——— КАРТОЧКА ———
-        card = QtWidgets.QFrame()
-        card.setObjectName("card")
-        card.setMinimumWidth(330)
+        outer.addStretch()
 
-        card_layout = QtWidgets.QVBoxLayout(card)
-        card_layout.setAlignment(QtCore.Qt.AlignCenter)
-        card_layout.setSpacing(20)
+        container = QtWidgets.QWidget()
+        container.setFixedWidth(FORM_WIDTH)
 
-        # ——— ЗАГОЛОВОК ———
-        title = QtWidgets.QLabel("Главное меню")
-        title.setObjectName("title")
-        card_layout.addWidget(title)
+        layout = QtWidgets.QVBoxLayout(container)
+        layout.setSpacing(22)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        # ——— КНОПКА НАЧАТЬ ОБУЧЕНИЕ ———
-        btn_learn = QtWidgets.QPushButton("Начать обучение")
-        btn_learn.setObjectName("menuButton")
-        btn_learn.clicked.connect(self.start_learning.emit)
-        card_layout.addWidget(btn_learn)
+        # ---------- TITLE ----------
+        title = QtWidgets.QLabel("Pudge Learning")
+        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setObjectName("Title")
+        layout.addWidget(title)
 
-        # ——— КНОПКА НАСТРОЙКИ ———
-        btn_settings = QtWidgets.QPushButton("Настройки")
-        btn_settings.setObjectName("menuButton")
-        btn_settings.clicked.connect(self.open_settings.emit)
-        card_layout.addWidget(btn_settings)
+        subtitle = QtWidgets.QLabel("Главное меню")
+        subtitle.setAlignment(QtCore.Qt.AlignCenter)
+        subtitle.setObjectName("Subtitle")
+        layout.addWidget(subtitle)
 
-        # ——— КНОПКА ВЫХОД ———
-        btn_exit = QtWidgets.QPushButton("Выход")
-        btn_exit.setObjectName("menuButton")
-        btn_exit.clicked.connect(self.exit_app.emit)
-        card_layout.addWidget(btn_exit)
+        layout.addSpacing(20)
 
-        # добавляем карточку
-        main_layout.addWidget(card)
+        # ---------- BUTTONS ----------
+        self.btn_start = self._primary_button("Начать обучение")
+        self.btn_profile = self._secondary_button("Профиль")
+        self.btn_settings = self._secondary_button("Настройки")
+        self.btn_exit = self._danger_button("Выход")
+
+        self.btn_start.clicked.connect(self.start_learning.emit)
+        self.btn_profile.clicked.connect(self.open_profile.emit)
+        self.btn_settings.clicked.connect(self.open_settings.emit)
+        self.btn_exit.clicked.connect(self.exit_app.emit)
+
+        layout.addWidget(self.btn_start)
+        layout.addWidget(self.btn_profile)
+        layout.addWidget(self.btn_settings)
+        layout.addSpacing(6)
+        layout.addWidget(self.btn_exit)
+
+        outer.addWidget(container)
+        outer.addStretch()
+
+    # ================= BUTTONS =================
+    def _primary_button(self, text):
+        btn = QtWidgets.QPushButton(text)
+        btn.setFixedSize(FORM_WIDTH, 64)
+        btn.setCursor(QtCore.Qt.PointingHandCursor)
+        btn.setObjectName("PrimaryButton")
+        return btn
+
+    def _secondary_button(self, text):
+        btn = QtWidgets.QPushButton(text)
+        btn.setFixedSize(FORM_WIDTH, 60)
+        btn.setCursor(QtCore.Qt.PointingHandCursor)
+        btn.setObjectName("SecondaryButton")
+        return btn
+
+    def _danger_button(self, text):
+        btn = QtWidgets.QPushButton(text)
+        btn.setFixedSize(FORM_WIDTH, 60)
+        btn.setCursor(QtCore.Qt.PointingHandCursor)
+        btn.setObjectName("DangerButton")
+        return btn
+
+    # ================= STYLES =================
+    def _apply_styles(self):
+        self.setStyleSheet("""
+        QWidget {
+            background: #f5f7ff;
+            font-family: Inter;
+        }
+
+        QLabel#Title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        QLabel#Subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        QPushButton {
+            border-radius: 22px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        QPushButton#PrimaryButton {
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #6366f1,
+                stop:1 #22d3ee
+            );
+            color: white;
+        }
+
+        QPushButton#PrimaryButton:hover {
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #4f46e5,
+                stop:1 #0ea5e9
+            );
+        }
+
+        QPushButton#SecondaryButton {
+            background: white;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+        }
+
+        QPushButton#SecondaryButton:hover {
+            background: #f1f5f9;
+        }
+
+        QPushButton#DangerButton {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+        }
+
+        QPushButton#DangerButton:hover {
+            background: #fecaca;
+        }
+        """)

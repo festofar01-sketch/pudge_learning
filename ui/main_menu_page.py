@@ -8,12 +8,17 @@ class MainMenuPage(QtWidgets.QWidget):
     start_learning = QtCore.pyqtSignal()
     open_profile = QtCore.pyqtSignal()
     open_settings = QtCore.pyqtSignal()
-    exit_app = QtCore.pyqtSignal()   # 🔥 ВАЖНО: чтобы не было AttributeError
+    open_admin_panel = QtCore.pyqtSignal()   # 🔥 НОВОЕ
+    exit_app = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
+        self.current_user = None
         self._build_ui()
         self._apply_styles()
+
+
+
 
     # ================= UI =================
     def _build_ui(self):
@@ -47,21 +52,40 @@ class MainMenuPage(QtWidgets.QWidget):
         self.btn_start = self._primary_button("Начать обучение")
         self.btn_profile = self._secondary_button("Профиль")
         self.btn_settings = self._secondary_button("Настройки")
+
+        # 🔥 АДМИН-КНОПКА
+        self.btn_admin = self._secondary_button("Админ-панель")
+        self.btn_admin.hide()  # ❗ по умолчанию скрыта
+
         self.btn_exit = self._danger_button("Выход")
 
         self.btn_start.clicked.connect(self.start_learning.emit)
         self.btn_profile.clicked.connect(self.open_profile.emit)
         self.btn_settings.clicked.connect(self.open_settings.emit)
+        self.btn_admin.clicked.connect(self.open_admin_panel.emit)
         self.btn_exit.clicked.connect(self.exit_app.emit)
 
         layout.addWidget(self.btn_start)
         layout.addWidget(self.btn_profile)
         layout.addWidget(self.btn_settings)
+        layout.addWidget(self.btn_admin)   # 🔥 добавили в меню
         layout.addSpacing(6)
         layout.addWidget(self.btn_exit)
 
         outer.addWidget(container)
         outer.addStretch()
+
+    # ================= PUBLIC =================
+    def set_user(self, user):
+        self.current_user = user
+
+        if user.role in ("admin", "teacher"):
+            self.btn_admin.setText(
+                "Админ-панель" if user.role == "admin" else "Панель преподавателя"
+            )
+            self.btn_admin.show()
+        else:
+            self.btn_admin.hide()
 
     # ================= BUTTONS =================
     def _primary_button(self, text):

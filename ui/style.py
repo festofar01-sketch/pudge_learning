@@ -1,168 +1,120 @@
 APP_STYLE = """
 /* =========================================================
-   GLOBAL RESET
+   GLOBAL RESET & BASE
 ========================================================= */
 * {
     outline: none;
 }
 
 QMainWindow, QWidget {
-    background-color: qlineargradient(
+    background: qlineargradient(
         x1:0, y1:0, x2:1, y2:1,
         stop:0 #f6f8ff,
         stop:1 #eef2ff
     );
     font-family: "Inter", "Segoe UI", sans-serif;
     color: #0f172a;
-    font-size: 14px;
 }
 
 /* =========================================================
-   REMOVE ALL CARDS / FRAMES
+   BASE LABEL (ВАЖНО: БЕЗ font-size)
 ========================================================= */
-QFrame {
-    background: transparent;
-    border: none;
-}
-
-#card {
-    background: transparent;
-    border: none;
-}
-
-/* =========================================================
-   TITLES & TEXT
-========================================================= */
-QLabel#title, QLabel#Title {
-    font-size: 32px;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-QLabel#subtitle, QLabel#Subtitle {
-    font-size: 14px;
-    color: #64748b;
-}
-
 QLabel {
     background: transparent;
 }
 
 /* =========================================================
-   INPUTS (LOGIN / FORMS)
+   TYPOGRAPHY
 ========================================================= */
-QLineEdit {
-    background-color: #ffffff;
-    border-radius: 22px;
-    border: 2px solid #e5e7eb;
-    padding: 16px 18px;
-    font-size: 15px;
-    color: #0f172a;
+QLabel#title, QLabel#Title {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
 }
 
-QLineEdit::placeholder {
-    color: #94a3b8;
+QLabel#subtitle, QLabel#Subtitle {
+    font-size: 16px;
+    color: #64748b;
 }
 
-QLineEdit:focus {
-    border: 2px solid #6366f1;
-    background-color: #ffffff;
+QLabel#status {
+    font-size: 16px;
+    color: #334155;
 }
 
 /* =========================================================
-   PRIMARY BUTTON (LOGIN / START / CHECK)
+   RESULT SCREEN (ВОТ ГЛАВНОЕ)
 ========================================================= */
-QPushButton#menuButton,
-QPushButton#PrimaryButton {
+QLabel#ResultTitle {
+    font-size: 40px;
+    font-weight: 900;
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#ResultSubtitle {
+    font-size: 18px;
+    color: #64748b;
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#ResultIcon {
+    font-size: 96px;
+    qproperty-alignment: AlignCenter;
+}
+
+QLabel#ResultStats {
+    font-size: 22px;
+    font-weight: 700;
+    qproperty-alignment: AlignCenter;
+}
+
+/* =========================================================
+   CARDS
+========================================================= */
+QFrame#card {
+    background: #ffffff;
+    border-radius: 28px;
+    border: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   BUTTONS (без изменений)
+========================================================= */
+QPushButton {
+    border: none;
+    border-radius: 26px;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 18px;
+}
+
+QPushButton#PrimaryButton,
+QPushButton#menuButton {
     background: qlineargradient(
         x1:0, y1:0, x2:1, y2:0,
         stop:0 #6366f1,
         stop:1 #22d3ee
     );
     color: white;
-    border: none;
-    border-radius: 24px;
     font-size: 17px;
     font-weight: 700;
-    padding: 18px;
 }
 
-QPushButton#menuButton:hover,
-QPushButton#PrimaryButton:hover {
-    background: qlineargradient(
-        x1:0, y1:0, x2:1, y2:0,
-        stop:0 #4f46e5,
-        stop:1 #06b6d4
-    );
-}
-
-QPushButton#menuButton:pressed,
-QPushButton#PrimaryButton:pressed {
-    background-color: #4338ca;
-}
-
-/* =========================================================
-   SECONDARY BUTTON
-========================================================= */
-QPushButton#secondaryButton,
-QPushButton#SecondaryButton {
-    background-color: #ffffff;
-    color: #0f172a;
-    border-radius: 24px;
+QPushButton#secondaryButton {
+    background: #ffffff;
     border: 2px solid #e5e7eb;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 18px;
 }
 
-QPushButton#secondaryButton:hover,
-QPushButton#SecondaryButton:hover {
-    border: 2px solid #6366f1;
-    color: #6366f1;
-    background-color: #f8fafc;
-}
-
-/* =========================================================
-   DANGER BUTTON
-========================================================= */
-QPushButton#dangerButton,
-QPushButton#DangerButton {
-    background-color: #fee2e2;
+QPushButton#dangerButton {
+    background: #fee2e2;
     color: #b91c1c;
-    border-radius: 24px;
-    border: none;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 18px;
-}
-
-QPushButton#dangerButton:hover,
-QPushButton#DangerButton:hover {
-    background-color: #fecaca;
 }
 
 /* =========================================================
-   TEST / ANSWER BUTTONS
-========================================================= */
-QPushButton#testButton {
-    background-color: #ffffff;
-    border-radius: 18px;
-    border: 2px solid #e5e7eb;
-    padding: 14px 18px;
-    font-size: 15px;
-    font-weight: 600;
-}
-
-QPushButton#testButton:hover {
-    border: 2px solid #6366f1;
-    color: #6366f1;
-}
-
-/* =========================================================
-   PROGRESS BAR
+   PROGRESS
 ========================================================= */
 QProgressBar {
-    background-color: #e5e7eb;
+    background: #e5e7eb;
     border-radius: 10px;
     height: 10px;
 }
@@ -176,77 +128,69 @@ QProgressBar::chunk {
     border-radius: 10px;
 }
 
-/* =========================================================
-   LISTS / SCROLL
-========================================================= */
-QScrollArea {
-    border: none;
-    background: transparent;
-}
+/* ================= ADMIN TABLE ================= */
 
-QScrollBar:vertical {
-    background: transparent;
-    width: 10px;
-}
-
-QScrollBar::handle:vertical {
-    background: #c7d2fe;
-    border-radius: 5px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background: #a5b4fc;
-}
-
-/* =========================================================
-   MESSAGE / STATUS TEXT
-========================================================= */
-QLabel#status {
+QTableWidget#AdminTable {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #e5e7eb;
+    gridline-color: #e5e7eb;
     font-size: 14px;
-    color: #334155;
 }
 
-/* =========================================================
-   CHECKBOX / RADIO (на будущее)
-========================================================= */
-QCheckBox {
-    spacing: 10px;
+QTableWidget#AdminTable::item {
+    padding: 12px;
 }
 
-QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
+QTableWidget#AdminTable::item:selected {
+    background: #eef2ff;
 }
 
-QCheckBox::indicator:unchecked {
-    border-radius: 6px;
-    border: 2px solid #c7d2fe;
+QHeaderView::section {
+    background: #f8fafc;
+    border: none;
+    font-weight: 700;
+    color: #0f172a;
+    padding: 10px;
+}
+
+/* === ROLE SELECT === */
+QComboBox#RoleBox {
+    border-radius: 12px;
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
     background: white;
 }
 
-QCheckBox::indicator:checked {
-    border-radius: 6px;
-    border: 2px solid #6366f1;
-    background: #6366f1;
+QComboBox#RoleBox:hover {
+    border: 1px solid #6366f1;
 }
 
-/* =========================================================
-   TOOLTIP
-========================================================= */
-QToolTip {
-    background-color: #0f172a;
+/* === SMALL BUTTONS === */
+QPushButton#PrimaryButtonSmall {
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 #6366f1,
+        stop:1 #22d3ee
+    );
     color: white;
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 12px;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
-/* =========================================================
-   DISABLED STATE
-========================================================= */
-QPushButton:disabled {
-    background: #e5e7eb;
-    color: #94a3b8;
-    border: none;
+QPushButton#DangerButtonSmall {
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
 }
+
+QPushButton#DangerButtonSmall:hover {
+    background: #fecaca;
+}
+
 """

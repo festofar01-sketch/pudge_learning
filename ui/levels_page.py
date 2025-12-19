@@ -30,7 +30,7 @@ class LevelsPage(QtWidgets.QWidget):
         # ===== КНОПКА НАЗАД =====
         back_btn = QtWidgets.QPushButton("← Назад")
         back_btn.setObjectName("secondaryButton")
-        back_btn.setFixedWidth(260)
+        back_btn.setFixedWidth(400)
         back_btn.clicked.connect(self.back_to_menu.emit)
         main_layout.addWidget(back_btn, alignment=QtCore.Qt.AlignCenter)
 
@@ -48,7 +48,7 @@ class LevelsPage(QtWidgets.QWidget):
         for code, name in level_list:
             btn = QtWidgets.QPushButton(f"{code} — {name}")
             btn.setObjectName("menuButton")
-            btn.setFixedWidth(260)                    # 🔥 одинаковая ширина
+            btn.setFixedWidth(400)                    # 🔥 одинаковая ширина
             btn.clicked.connect(lambda _, c=code: self.level_selected.emit(c))
 
             # 🔥 добавляем С ВЫРАВНИВАНИЕМ

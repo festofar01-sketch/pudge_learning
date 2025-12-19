@@ -15,9 +15,9 @@ class TaskLevelsPage(QtWidgets.QWidget):
         title.setObjectName("title")
         main.addWidget(title)
 
-        self.btn1 = self.make_btn("🟢 Перевод слов", 1)
-        self.btn2 = self.make_btn("🔵 Вставить слово", 2)
-        self.btn3 = self.make_btn("🟣 Синтаксис (скоро)", 3)
+        self.btn1 = self.make_btn("Перевод слов", 1)
+        self.btn2 = self.make_btn("Вставить слово", 2)
+        self.btn3 = self.make_btn("Синтаксис", 3)
 
         main.addWidget(self.btn1)
         main.addWidget(self.btn2)

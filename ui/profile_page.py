@@ -1,98 +1,82 @@
 from PyQt5 import QtWidgets, QtCore
 from services.progress_service import get_user_progress
 
+FORM_WIDTH = 420
+
 
 class ProfilePage(QtWidgets.QWidget):
-
     back_to_menu = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
-
         self.user = None
+        self._build_ui()
+        self._apply_styles()
 
-        main = QtWidgets.QVBoxLayout(self)
-        main.setAlignment(QtCore.Qt.AlignCenter)
-        main.setContentsMargins(20, 20, 20, 20)
+    # ================= UI =================
+    def _build_ui(self):
+        self.main = QtWidgets.QVBoxLayout(self)
+        self.main.setAlignment(QtCore.Qt.AlignCenter)
+        self.main.setContentsMargins(40, 40, 40, 40)
+        self.main.setSpacing(26)
 
-        card = QtWidgets.QFrame()
-        card.setObjectName("card")
-        card.setMinimumWidth(360)
-        card.setMaximumWidth(400)
+        container = QtWidgets.QWidget()
+        container.setFixedWidth(FORM_WIDTH)
 
-        layout = QtWidgets.QVBoxLayout(card)
-        layout.setSpacing(14)
+        layout = QtWidgets.QVBoxLayout(container)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
+        layout.setSpacing(24)
 
-        # ===== ЗАГОЛОВОК =====
+        # ===== HEADER =====
         title = QtWidgets.QLabel("Профиль")
-        title.setObjectName("title")
+        title.setObjectName("Title")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
 
         self.username_label = QtWidgets.QLabel("")
-        self.username_label.setObjectName("subtitle")
+        self.username_label.setObjectName("Subtitle")
         self.username_label.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(self.username_label)
 
-        # ===== ТАБЛИЦА =====
-        self.table = QtWidgets.QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels([
-            "Уровень",
-            "Верно",
-            "Неверно",
-            "Всего",
-            "Статус"
-        ])
+        # ===== STATS CARD =====
+        stats_card = QtWidgets.QFrame()
+        stats_card.setObjectName("StatsCard")
 
-        self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.table.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        stats_layout = QtWidgets.QGridLayout(stats_card)
+        stats_layout.setContentsMargins(24, 24, 24, 24)
+        stats_layout.setSpacing(18)
 
-        # ===== СТИЛЬ ТАБЛИЦЫ =====
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #0f0f0f;
-                gridline-color: #d4af37;
-                color: #d4af37;
-                border: 1px solid #d4af37;
-            }
-            QHeaderView::section {
-                background-color: #0f0f0f;
-                color: #d4af37;
-                border: 1px solid #d4af37;
-                padding: 4px;
-                font-weight: bold;
-            }
-            QTableWidget::item {
-                border: 1px solid #2b2b2b;
-                padding: 4px;
-            }
-        """)
+        total_w, self.total_levels_value = self._stat_block("Всего уровней", "0")
+        done_w, self.completed_levels_value = self._stat_block("Завершено", "0")
+        ok_w, self.correct_answers_value = self._stat_block("Правильных", "0")
+        bad_w, self.wrong_answers_value = self._stat_block("Ошибок", "0")
 
-        layout.addWidget(self.table)
+        stats_layout.addWidget(total_w, 0, 0)
+        stats_layout.addWidget(done_w, 0, 1)
+        stats_layout.addWidget(ok_w, 1, 0)
+        stats_layout.addWidget(bad_w, 1, 1)
 
-        # ===== НАЗАД =====
-        back_btn = QtWidgets.QPushButton("Назад")
-        back_btn.setObjectName("secondaryButton")
+        layout.addWidget(stats_card)
+
+        # ===== BACK =====
+        back_btn = QtWidgets.QPushButton("Назад в меню")
+        back_btn.setObjectName("BackButton")
+        back_btn.setFixedHeight(58)
         back_btn.clicked.connect(self.back_to_menu.emit)
         layout.addWidget(back_btn)
 
-        main.addWidget(card)
+        self.main.addWidget(container)
 
-    # ==========================================
+    # ================= LOGIC =================
     def set_user(self, user):
         self.user = user
         self.username_label.setText(f"Пользователь: {user.username}")
         self.load_progress()
 
-    # ==========================================
     def load_progress(self):
         rows = get_user_progress(self.user.id)
 
-        # -------- УБИРАЕМ ПОВТОРЫ УРОВНЕЙ --------
         levels = {}
-
         for level, correct, wrong, total, percent, created_at in rows:
             if level not in levels:
                 levels[level] = {
@@ -101,21 +85,101 @@ class ProfilePage(QtWidgets.QWidget):
                     "total": total
                 }
             else:
-                # берём лучший результат
                 levels[level]["correct"] = max(levels[level]["correct"], correct)
                 levels[level]["wrong"] = min(levels[level]["wrong"], wrong)
 
-        self.table.setRowCount(len(levels))
+        total_correct = sum(d["correct"] for d in levels.values())
+        total_wrong = sum(d["wrong"] for d in levels.values())
+        completed = sum(1 for d in levels.values() if d["correct"] == d["total"])
 
-        for row_index, (level, data) in enumerate(levels.items()):
-            correct = data["correct"]
-            wrong = data["wrong"]
-            total = data["total"]
+        self.total_levels_value.setText(str(len(levels)))
+        self.completed_levels_value.setText(str(completed))
+        self.correct_answers_value.setText(str(total_correct))
+        self.wrong_answers_value.setText(str(total_wrong))
 
-            status = "✔ Пройден" if correct == total else "⏳ Не завершён"
+    # ================= UI PARTS =================
+    def _stat_block(self, title, value):
+        card = QtWidgets.QFrame()
+        card.setObjectName("MiniCard")
 
-            self.table.setItem(row_index, 0, QtWidgets.QTableWidgetItem(level))
-            self.table.setItem(row_index, 1, QtWidgets.QTableWidgetItem(str(correct)))
-            self.table.setItem(row_index, 2, QtWidgets.QTableWidgetItem(str(wrong)))
-            self.table.setItem(row_index, 3, QtWidgets.QTableWidgetItem(str(total)))
-            self.table.setItem(row_index, 4, QtWidgets.QTableWidgetItem(status))
+        layout = QtWidgets.QVBoxLayout(card)
+        layout.setSpacing(8)
+        layout.setContentsMargins(16, 14, 16, 14)
+
+        lbl = QtWidgets.QLabel(title)
+        lbl.setObjectName("StatLabel")
+
+        val = QtWidgets.QLabel(value)
+        val.setObjectName("StatValue")
+
+        layout.addWidget(lbl)
+        layout.addWidget(val)
+
+        return card, val
+
+    # ================= STYLES =================
+    def _apply_styles(self):
+        self.setStyleSheet("""
+        QWidget {
+            background: #f5f7ff;
+            font-family: Inter;
+        }
+
+        QLabel#Title {
+            font-size: 32px;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        QLabel#Subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        /* ===== MAIN CARD ===== */
+        QFrame#StatsCard {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* ===== MINI CARDS ===== */
+        QFrame#MiniCard {
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        QLabel#StatLabel {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        QLabel#StatValue {
+            font-size: 28px;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        /* ===== BUTTON ===== */
+        QPushButton#BackButton {
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #6366f1,
+                stop:1 #22d3ee
+            );
+            color: white;
+            border-radius: 26px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        QPushButton#BackButton:hover {
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #4f46e5,
+                stop:1 #0ea5e9
+            );
+        }
+        """)

@@ -1,245 +1,163 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 import random
-from math import floor
 
-
-# =========================
-#   CONSTANTS / SIZES
-# =========================
-CARD_WIDTH = 640
-BANK_INNER_WIDTH = 560
-
-WORD_W = 130
-WORD_H = 52
-SLOT_W = 130
-SLOT_H = 52
-
-H_SPACING = 14
-V_SPACING = 14
-
+# ================== CONSTANTS ==================
+CARD_WIDTH = 720
+INNER_WIDTH = 560
+WORD_HEIGHT = 52
+SLOT_HEIGHT = 52
+SPACING = 16
 MAX_ERRORS = 3
 
 
-# =========================
-#   HELPERS
-# =========================
-def _parse_words(data):
-    """
-    Поддерживает:
-    - list/tuple: ["I","am","a","student"]
-    - str: "{I,am,a,student}" или "I,am,a,student"
-    """
-    if data is None:
-        return []
-
+# ================== HELPERS ==================
+def parse_words(data):
     if isinstance(data, (list, tuple)):
         return [str(x) for x in data]
-
     if isinstance(data, str):
-        s = data.strip()
-        if s.startswith("{") and s.endswith("}"):
-            s = s[1:-1]
-        parts = [p.strip() for p in s.split(",")]
-        return [p for p in parts if p]
-
-    return [str(data)]
+        return [w.strip() for w in data.strip("{}").split(",") if w.strip()]
+    return []
 
 
-def _make_drag_pixmap(widget: QtWidgets.QWidget):
+def calc_cell_width(count):
+    spacing = SPACING * (count - 1)
+    width = (INNER_WIDTH - spacing) // max(1, count)
+    return max(110, min(width, 160))
+
+
+def grab(widget):
     return widget.grab()
 
 
-# =========================
-#   DROP TARGET: WORD BANK
-# =========================
-class WordBankArea(QtWidgets.QFrame):
+# ================== WORD BANK ==================
+class WordBank(QtWidgets.QFrame):
     dropped_from_slot = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.setAcceptDrops(True)
-        self.setObjectName("wordBankFrame")
-        self.setFixedWidth(BANK_INNER_WIDTH)
+        self.setFixedWidth(INNER_WIDTH)
 
-        outer = QtWidgets.QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
-
-        self.grid_host = QtWidgets.QWidget()
-        self.grid = QtWidgets.QGridLayout(self.grid_host)
-        self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setHorizontalSpacing(H_SPACING)
-        self.grid.setVerticalSpacing(V_SPACING)
-        self.grid.setAlignment(QtCore.Qt.AlignCenter)
-
-        outer.addWidget(self.grid_host, alignment=QtCore.Qt.AlignCenter)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        if event.mimeData().hasText():
-            self.dropped_from_slot.emit(event.mimeData().text())
-            event.setDropAction(QtCore.Qt.MoveAction)
-            event.accept()
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.layout.setSpacing(SPACING)
+        self.layout.setAlignment(QtCore.Qt.AlignCenter)
 
     def clear(self):
-        while self.grid.count():
-            item = self.grid.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        while self.layout.count():
+            w = self.layout.takeAt(0).widget()
+            if w:
+                w.deleteLater()
 
-    def _cols(self):
-        usable = BANK_INNER_WIDTH
-        cell = WORD_W + H_SPACING
-        return max(1, floor((usable + H_SPACING) / cell))
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasText():
+            e.acceptProposedAction()
 
-    def add_words(self, widgets):
-        cols = self._cols()
-        r, c = 0, 0
-        for w in widgets:
-            self.grid.addWidget(w, r, c, alignment=QtCore.Qt.AlignCenter)
-            c += 1
-            if c >= cols:
-                c = 0
-                r += 1
+    def dropEvent(self, e):
+        self.dropped_from_slot.emit(e.mimeData().text())
+        e.acceptProposedAction()
 
 
-# =========================
-#   DRAG SOURCE: WORD
-# =========================
+# ================== DRAG WORD ==================
 class DraggableWord(QtWidgets.QLabel):
-    """
-    Слово в банке:
-    - перетаскивается в слот
-    - если перенос успешный -> сообщаем странице, что слово "взяли" из банка
-    """
-    def __init__(self, text: str, page):
+    def __init__(self, text, page, width):
         super().__init__(text)
         self.page = page
 
+        self.setFixedSize(width, WORD_HEIGHT)
         self.setAlignment(QtCore.Qt.AlignCenter)
-        self.setFixedSize(WORD_W, WORD_H)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
 
         f = self.font()
-        f.setPointSize(14)
         f.setBold(True)
+        f.setPointSize(14)
         self.setFont(f)
 
         self.setStyleSheet("""
-            QLabel {
-                border: 2px solid #f5c542;
-                border-radius: 12px;
-                background: #1e1e1e;
-                color: #f5c542;
-                padding-left: 6px;
-                padding-right: 6px;
-            }
+        QLabel {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 2px solid #e5e7eb;
+        }
+        QLabel:hover {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
         """)
 
-    def mousePressEvent(self, event):
-        if event.button() != QtCore.Qt.LeftButton:
-            return
-
+    def mousePressEvent(self, e):
         drag = QtGui.QDrag(self)
         mime = QtCore.QMimeData()
         mime.setText(self.text())
-        mime.setProperty("source_type", "bank")
         drag.setMimeData(mime)
+        drag.setPixmap(grab(self))
+        drag.setHotSpot(e.pos())
 
-        drag.setPixmap(_make_drag_pixmap(self))
-        drag.setHotSpot(event.pos())
-
-        result = drag.exec_(QtCore.Qt.MoveAction)
-
-        # ВАЖНО: если drop успешный, слово должно исчезнуть ИЗ МОДЕЛИ банка
-        if result == QtCore.Qt.MoveAction:
-            self.page.on_word_taken_from_bank(self.text())
+        if drag.exec_(QtCore.Qt.MoveAction) == QtCore.Qt.MoveAction:
+            self.page.on_take_from_bank(self.text())
 
 
-# =========================
-#   DROP SLOT (drag back)
-# =========================
+# ================== SLOT ==================
 class DropSlot(QtWidgets.QLabel):
-    def __init__(self, page):
+    def __init__(self, page, width):
         super().__init__()
         self.page = page
         self.word = None
 
         self.setAcceptDrops(True)
-        self.setFixedSize(SLOT_W, SLOT_H)
+        self.setFixedSize(width, SLOT_HEIGHT)
         self.setAlignment(QtCore.Qt.AlignCenter)
 
         f = self.font()
-        f.setPointSize(14)
         f.setBold(True)
+        f.setPointSize(14)
         self.setFont(f)
 
         self.empty_style = """
-            QLabel {
-                border: 2px dashed #f5c542;
-                border-radius: 12px;
-                background: #111;
-            }
+        QLabel {
+            background: #f8fafc;
+            border: 2px dashed #c7d2fe;
+            border-radius: 18px;
+        }
         """
         self.filled_style = """
-            QLabel {
-                border: 2px solid #f5c542;
-                border-radius: 12px;
-                background: #1e1e1e;
-                color: #f5c542;
-                padding-left: 6px;
-                padding-right: 6px;
-            }
+        QLabel {
+            background: #ffffff;
+            border: 2px solid #6366f1;
+            border-radius: 18px;
+        }
         """
         self.setStyleSheet(self.empty_style)
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasText():
+            e.acceptProposedAction()
 
-    def dropEvent(self, event):
+    def dropEvent(self, e):
         if self.word is not None:
             return
-        if not event.mimeData().hasText():
-            return
-
-        self.word = event.mimeData().text()
+        self.word = e.mimeData().text()
         self.setText(self.word)
         self.setStyleSheet(self.filled_style)
+        e.acceptProposedAction()
 
-        event.setDropAction(QtCore.Qt.MoveAction)
-        event.accept()
-
-    def mousePressEvent(self, event):
-        # Перетаскиваем слово из слота обратно в банк
-        if event.button() != QtCore.Qt.LeftButton or not self.word:
+    def mousePressEvent(self, e):
+        if not self.word:
             return
 
         drag = QtGui.QDrag(self)
         mime = QtCore.QMimeData()
         mime.setText(self.word)
-        mime.setProperty("source_type", "slot")
         drag.setMimeData(mime)
+        drag.setPixmap(grab(self))
+        drag.setHotSpot(e.pos())
 
-        drag.setPixmap(_make_drag_pixmap(self))
-        drag.setHotSpot(event.pos())
-
-        result = drag.exec_(QtCore.Qt.MoveAction)
-
-        # Если реально утащили (drop принят банком)
-        if result == QtCore.Qt.MoveAction:
-            # слот очищаем
+        if drag.exec_(QtCore.Qt.MoveAction) == QtCore.Qt.MoveAction:
             self.word = None
             self.setText("")
             self.setStyleSheet(self.empty_style)
-            # добавление в банк сделает bank.dropEvent -> page.on_drop_back_to_bank
 
 
-# =========================
-#   MAIN PAGE
-# =========================
+# ================== MAIN PAGE ==================
 class SyntaxLessonPage(QtWidgets.QWidget):
     save_progress = QtCore.pyqtSignal(str, int, int, int)
     go_main_menu = QtCore.pyqtSignal()
@@ -247,209 +165,151 @@ class SyntaxLessonPage(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        self.level_name = ""
+        # ===== STATE =====
+        self.level = ""
         self.questions = []
         self.index = 0
         self.correct = 0
         self.wrong = 0
+        self.lives = MAX_ERRORS
+        self.is_finished = False
         self.correct_order = []
+        self.bank_words = []
 
-        # банк хранит ТОЛЬКО доступные слова (не спрятанные виджеты)
-        self._bank_words = []
+        # ===== ROOT =====
+        root = QtWidgets.QVBoxLayout(self)
+        root.setAlignment(QtCore.Qt.AlignCenter)
 
-        # ========== OUTER ==========
-        outer = QtWidgets.QVBoxLayout(self)
-        outer.setAlignment(QtCore.Qt.AlignCenter)
-        outer.addStretch()
-
-        # ========== CARD ==========
+        # ===== CARD =====
         self.card = QtWidgets.QFrame()
-        self.card.setObjectName("card")
         self.card.setFixedWidth(CARD_WIDTH)
 
         self.card_layout = QtWidgets.QVBoxLayout(self.card)
-        self.card_layout.setAlignment(QtCore.Qt.AlignCenter)
-        self.card_layout.setSpacing(16)
-        self.card_layout.setContentsMargins(30, 24, 30, 24)
+        self.card_layout.setSpacing(18)
+        self.card_layout.setContentsMargins(48, 36, 48, 36)
 
-        # чтобы не прыгало
-        self.card_layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        root.addWidget(self.card)
 
-        # progress
+        # ===== TOP =====
+        top = QtWidgets.QHBoxLayout()
+
         self.progress = QtWidgets.QProgressBar()
-        self.progress.setObjectName("goldProgress")
-        self.progress.setRange(0, 100)
         self.progress.setTextVisible(False)
-        self.progress.setFixedWidth(BANK_INNER_WIDTH)
-        self.card_layout.addWidget(self.progress, alignment=QtCore.Qt.AlignCenter)
+        self.progress.setFixedHeight(18)
 
+        self.lives_label = QtWidgets.QLabel()
+        self.lives_label.setAlignment(QtCore.Qt.AlignRight)
+        self.lives_label.setFixedWidth(80)
+
+        top.addWidget(self.progress)
+        top.addWidget(self.lives_label)
+        self.card_layout.addLayout(top)
+
+        # ===== TITLE =====
         self.title = QtWidgets.QLabel("Собери предложение")
-        self.title.setObjectName("title")
         self.title.setAlignment(QtCore.Qt.AlignCenter)
         self.card_layout.addWidget(self.title)
 
         self.counter = QtWidgets.QLabel("")
-        self.counter.setObjectName("subtitle")
         self.counter.setAlignment(QtCore.Qt.AlignCenter)
         self.card_layout.addWidget(self.counter)
 
-        # slots
-        self.slots_host = QtWidgets.QWidget()
-        self.slots_host.setFixedWidth(BANK_INNER_WIDTH)
-        self.slots_layout = QtWidgets.QHBoxLayout(self.slots_host)
+        # ===== SLOTS =====
+        self.slots_layout = QtWidgets.QHBoxLayout()
+        self.slots_layout.setSpacing(SPACING)
         self.slots_layout.setAlignment(QtCore.Qt.AlignCenter)
-        self.slots_layout.setSpacing(H_SPACING)
-        self.slots_layout.setContentsMargins(0, 0, 0, 0)
-        self.card_layout.addWidget(self.slots_host, alignment=QtCore.Qt.AlignCenter)
+        self.card_layout.addLayout(self.slots_layout)
 
-        # bank
-        self.bank = WordBankArea()
-        self.bank.dropped_from_slot.connect(self.on_drop_back_to_bank)
+        # ===== BANK =====
+        self.bank = WordBank()
+        self.bank.dropped_from_slot.connect(self.on_return_to_bank)
         self.card_layout.addWidget(self.bank, alignment=QtCore.Qt.AlignCenter)
 
-        # buttons
+        # ===== BUTTONS =====
         self.check_btn = QtWidgets.QPushButton("Проверить")
-        self.check_btn.setObjectName("menuButton")
-        self.check_btn.setFixedSize(320, 54)
+        self.check_btn.setFixedSize(360, 56)
         self.check_btn.clicked.connect(self.check)
         self.card_layout.addWidget(self.check_btn, alignment=QtCore.Qt.AlignCenter)
 
         self.finish_btn = QtWidgets.QPushButton("Завершить досрочно")
-        self.finish_btn.setObjectName("dangerButton")
-        self.finish_btn.setFixedSize(320, 54)
+        self.finish_btn.setFixedSize(360, 56)
         self.finish_btn.clicked.connect(self.finish_early)
         self.card_layout.addWidget(self.finish_btn, alignment=QtCore.Qt.AlignCenter)
 
         self.status = QtWidgets.QLabel("")
-        self.status.setAlignment(
-            QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
-        )
-
-        self.status.setWordWrap(True)
-        self.status.setFixedHeight(56)  # фикс дёрганья
+        self.status.setAlignment(QtCore.Qt.AlignCenter)
         self.card_layout.addWidget(self.status)
 
-        self.menu_btn = QtWidgets.QPushButton("В главное меню")
-        self.menu_btn.setObjectName("secondaryButton")
-        self.menu_btn.setFixedSize(320, 54)
-        self.menu_btn.clicked.connect(self.go_main_menu.emit)
-        self.menu_btn.hide()
-        self.card_layout.addWidget(self.menu_btn, alignment=QtCore.Qt.AlignCenter)
+    # ================== LIVES ==================
+    def update_lives_ui(self):
+        self.lives_label.setText("❤️" * self.lives + "🤍" * (MAX_ERRORS - self.lives))
 
-        outer.addWidget(self.card, alignment=QtCore.Qt.AlignCenter)
-        outer.addStretch()
+    # ================== LOAD ==================
+    def load_level(self, level, questions):
+        self.level = level
 
-        # ========== ANIM ==========
-        self.opacity = QtWidgets.QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self.opacity)
+        # 🔥 ЖЁСТКО ПРИВОДИМ К dict
+        self.questions = []
+        for q in questions:
+            if isinstance(q, dict):
+                self.questions.append(q)
+            else:
+                # защита на случай старого формата
+                self.questions.append({
+                    "sentence": q[1] if len(q) > 1 else "",
+                    "words": q[2],
+                    "correct_order": q[3]
+                })
 
-        self.fade_anim = QtCore.QPropertyAnimation(self.opacity, b"opacity")
-        self.fade_anim.setDuration(260)
-
-        self.shake_anim = QtCore.QPropertyAnimation(self, b"pos")
-        self.shake_anim.setDuration(180)
-
-    # =========================
-    #   LOADING
-    # =========================
-    def load_level(self, level_name, questions):
-        self.level_name = level_name
-        self.questions = questions or []
         self.index = 0
         self.correct = 0
         self.wrong = 0
+        self.lives = MAX_ERRORS
+        self.is_finished = False
 
-        self.menu_btn.hide()
-        self.check_btn.show()
-        self.finish_btn.show()
-        self.progress.show()
-        self.progress.setValue(0)
+        self.update_lives_ui()
+        self.show_question()
 
-        self.status.setText("")
-        self._show_question()
-
-    def _question_to_words(self, q):
-        # q ожидается dict: {"words":..., "correct_order":...}
-        words = _parse_words(q.get("words"))
-        correct = _parse_words(q.get("correct_order"))
-        return words, correct
-
-    # =========================
-    #   UI BUILDERS
-    # =========================
-    def _clear_layout_widgets(self, layout: QtWidgets.QLayout):
-        while layout.count():
-            item = layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-    def _rebuild_bank(self):
-        self.bank.clear()
-        widgets = [DraggableWord(w, self) for w in self._bank_words]
-        self.bank.add_words(widgets)
-
-    def _show_question(self):
-        if not self.questions:
-            self.status.setText("<span style='color:#ff4d6d;'>Нет заданий.</span>")
-            self.finish(save=False)
-            return
-
+    def show_question(self):
         q = self.questions[self.index]
-        words, correct = self._question_to_words(q)
 
-        if not words or not correct:
-            self.status.setText("<span style='color:#ff4d6d;'>Ошибка данных вопроса.</span>")
-            self.finish(save=False)
-            return
+        # ✅ ВОТ ТУТ ТЕПЕРЬ 100% БУДЕТ ТЕКСТ
+        self.title.setText(q["sentence"])
+        self.status.clear()
 
-        self.correct_order = correct[:]
+        self.correct_order = parse_words(q["correct_order"])
+        self.bank_words = parse_words(q["words"])
+        random.shuffle(self.bank_words)
 
-        # банк = ВСЕ слова этого вопроса (дубликаты допускаются!)
-        self._bank_words = words[:]
-        random.shuffle(self._bank_words)
+        self.counter.setText(f"Вопрос {self.index + 1} из {len(self.questions)}")
+        self.progress.setValue(int(self.index / len(self.questions) * 100))
 
-        self.counter.setText(f"Задание {self.index + 1} из {len(self.questions)}")
+        while self.slots_layout.count():
+            w = self.slots_layout.takeAt(0).widget()
+            if w:
+                w.deleteLater()
 
-        percent = int((self.index / max(1, len(self.questions))) * 100)
-        self.progress.setValue(percent)
+        width = calc_cell_width(len(self.correct_order))
+        for _ in self.correct_order:
+            self.slots_layout.addWidget(DropSlot(self, width))
 
-        left = max(0, MAX_ERRORS - self.wrong)
-        self.status.setText(f"Осталось попыток: <b>{left}</b>")
+        self.rebuild_bank(width)
 
-        # slots
-        self._clear_layout_widgets(self.slots_layout)
-        for _ in range(len(self.correct_order)):
-            self.slots_layout.addWidget(DropSlot(self), alignment=QtCore.Qt.AlignCenter)
+    def rebuild_bank(self, width):
+        self.bank.clear()
+        for w in self.bank_words:
+            self.bank.layout.addWidget(DraggableWord(w, self, width))
 
-        # bank
-        self._rebuild_bank()
-        self.fade()
+    def on_take_from_bank(self, word):
+        if word in self.bank_words:
+            self.bank_words.remove(word)
+        self.rebuild_bank(calc_cell_width(len(self.correct_order)))
 
-    # =========================
-    #   BANK MODEL SYNC
-    # =========================
-    def on_word_taken_from_bank(self, text: str):
-        """
-        Слово успешно ушло из банка в слот -> убираем его из списка доступных.
-        (убираем одну штуку, даже если есть дубликаты)
-        """
-        try:
-            self._bank_words.remove(text)
-        except ValueError:
-            pass
-        self._rebuild_bank()
+    def on_return_to_bank(self, word):
+        self.bank_words.append(word)
+        self.rebuild_bank(calc_cell_width(len(self.correct_order)))
 
-    def on_drop_back_to_bank(self, text: str):
-        """
-        Слово успешно вернули в банк (drag из слота в область банка)
-        """
-        self._bank_words.append(text)
-        self._rebuild_bank()
-
-    # =========================
-    #   CHECK / FINISH
-    # =========================
-    def _current_answer(self):
+    def current_answer(self):
         ans = []
         for i in range(self.slots_layout.count()):
             slot = self.slots_layout.itemAt(i).widget()
@@ -458,82 +318,56 @@ class SyntaxLessonPage(QtWidgets.QWidget):
             ans.append(slot.word)
         return ans
 
+    # ================== CHECK ==================
     def check(self):
-        answer = self._current_answer()
-        if answer is None:
-            self.status.setText("⚠️ Заполни все поля")
+        ans = self.current_answer()
+        if ans is None:
+            self.status.setText("Заполни все слова")
             return
 
-        if answer == self.correct_order:
+        if ans == self.correct_order:
             self.correct += 1
             self.index += 1
-
             if self.index >= len(self.questions):
-                self.finish(save=True)
+                self.finish()
             else:
-                self._show_question()
+                self.show_question()
         else:
             self.wrong += 1
-            left = max(0, MAX_ERRORS - self.wrong)
-            self.status.setText(
-                f"<span style='color:#ff4d6d;'><b>❌ Неправильно</b></span> | "
-                f"Осталось попыток: <b>{left}</b>"
-            )
-            self.shake()
+            self.lives -= 1
+            self.update_lives_ui()
+            self.status.setText("❌ Неправильно")
+            if self.lives <= 0:
+                self.finish()
 
-            if self.wrong >= MAX_ERRORS:
-                QtCore.QTimer.singleShot(250, lambda: self.finish(save=True))
-
+    # ================== FINISH ==================
     def finish_early(self):
-        self.finish(save=True)
+        self.finish()
 
-    def finish(self, save=True):
-        self._clear_layout_widgets(self.slots_layout)
-        self.bank.clear()
-        self.check_btn.hide()
-        self.finish_btn.hide()
-        self.progress.hide()
+    def finish(self):
+        # защита от повторного вызова
+        if self.is_finished:
+            return
+        self.is_finished = True
 
-        self.menu_btn.show()
+        # сохраняем прогресс
+        self.save_progress.emit(
+            self.level,
+            self.correct,
+            self.wrong,
+            len(self.questions)
+        )
 
-        if save:
-            self.save_progress.emit(
-                self.level_name,
-                self.correct,
-                self.wrong,
-                len(self.questions)
-            )
+        # получаем главное окно (НЕ parent!)
+        main_window = self.window()
 
-        icon = "❌" if self.wrong >= MAX_ERRORS else "✅"
-        color = "#ff4d6d" if icon == "❌" else "#6bff95"
+        # передаём данные на страницу результата
+        main_window.result_page.set_result(
+            correct=self.correct,
+            wrong=self.wrong,
+            total=len(self.questions),
+            lives=self.lives
+        )
 
-        self.status.setText(f"""
-        <div style="margin-top:-150px; font-size:72px; color:{color}; text-align:center;">
-            {icon}
-        </div>
-
-        <div style="margin-top:12px; font-size:14px; text-align:center;">
-            Правильных: <b>{self.correct}</b> &nbsp;|&nbsp;
-            Ошибок: <b>{self.wrong}</b>
-        </div>
-        """)
-
-        self.fade()
-
-    # =========================
-    #   ANIMATIONS
-    # =========================
-    def fade(self):
-        self.fade_anim.stop()
-        self.fade_anim.setStartValue(0)
-        self.fade_anim.setEndValue(1)
-        self.fade_anim.start()
-
-    def shake(self):
-        p = self.pos()
-        self.shake_anim.stop()
-        self.shake_anim.setKeyValueAt(0, p)
-        self.shake_anim.setKeyValueAt(0.25, p + QtCore.QPoint(-8, 0))
-        self.shake_anim.setKeyValueAt(0.5, p + QtCore.QPoint(8, 0))
-        self.shake_anim.setKeyValueAt(1, p)
-        self.shake_anim.start()
+        # переключаем экран
+        main_window.stack.setCurrentWidget(main_window.result_page)
